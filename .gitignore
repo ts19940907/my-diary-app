@@ -1,0 +1,10 @@
+# Python
+backend/__pycache__/
+backend/.venv/
+backend/.env
+
+# SQLite Database (ローカルのデータはプッシュしない)
+backend/*.db
+
+# OS
+.DS_Store
