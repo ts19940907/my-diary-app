@@ -42,3 +42,12 @@ def create_or_update_diary(diary: schemas.DiaryCreate, db: Session = Depends(dat
     db.commit()
     db.refresh(db_diary)
     return db_diary
+
+@app.delete("/diaries/{date}")
+def delete_diary(date: str, db: Session = Depends(database.get_db)):
+    db_diary = db.query(models.Diary).filter(models.Diary.date == date).first()
+    if not db_diary:
+        raise HTTPException(status_code=404, detail="Diary not found")
+    db.delete(db_diary)
+    db.commit()
+    return {"message": "Deleted successfully"}

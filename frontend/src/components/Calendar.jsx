@@ -1,173 +1,245 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import { mockDiaries } from '../data/mockData';
+import axios from 'axios';
 
 const Calendar = () => {
+  const [diaries, setDiaries] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
-  
-  // ★重要：3つの項目を個別に管理するState
-  const [formData, setFormData] = useState({ 
-    work: '', 
-    issue: '', 
-    solution: '' 
-  });
-
-  // ★ツールチップ用のState
+  const [formData, setFormData] = useState({ work: '', issue: '', solution: '' });
   const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, content: {} });
 
-  // 日付クリック（またはイベントクリック）時の共通処理
+  const diariesRef = useRef([]);
+  useEffect(() => { diariesRef.current = diaries; }, [diaries]);
+
+  const fetchDiaries = async () => {
+    try {
+      const response = await axios.get('http://localhost:8000/diaries');
+      setDiaries(response.data);
+    } catch (error) { console.error("取得失敗", error); }
+  };
+
+  useEffect(() => { fetchDiaries(); }, []);
+
   const handleOpenModal = (dateStr) => {
-    // setSelectedDate(dateStr);
-    
-    // // mockDataから該当する日付のデータを探す
-    // const existingEntry = mockDiaries.find(d => d.date === dateStr);
-
-    // if (existingEntry) {
-    //   // 既存データがあれば、3項目すべてにセット（これで再編集が可能になります）
-    //   setFormData({
-    //     work: existingEntry.work || '',
-    //     issue: existingEntry.issue || '',
-    //     solution: existingEntry.solution || ''
-    //   });
-    // } else {
-    //   // 新規の場合はすべて空にする
-    //   setFormData({ work: '', issue: '', solution: '' });
-    // }
-    // setIsModalOpen(true);
-    // 1. まずツールチップを確実に閉じる（座標もリセット）
-    setTooltip({ show: false, x: 0, y: 0, content: {} });
-
-    // 2. 日付をセット
+    setTooltip({ show: false, x: 0, y: 0, content: {} }); // モーダルを開く時にツールチップを消去
     setSelectedDate(dateStr);
-  
-    // 3. データの読み込み
-    const existingEntry = mockDiaries.find(d => d.date === dateStr);
-    if (existingEntry) {
-        setFormData({
-            work: existingEntry.work || '',
-            issue: existingEntry.issue || '',
-            solution: existingEntry.solution || ''
-        });
-    } else {
-        setFormData({ work: '', issue: '', solution: '' });
+    const existing = diariesRef.current.find(d => d.date === dateStr);
+    setFormData(existing ? { ...existing } : { work: '', issue: '', solution: '' });
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    // もし業務内容が空っぽなら、削除処理として扱う
+    if (!formData.work.trim()) {
+      handleDelete();
+      return;
     }
 
-    // 4. モーダルを開く
-    setIsModalOpen(true);
-    };
-
-  const handleMouseEnter = (info) => {
-    const { work, issue } = info.event.extendedProps;
-    setTooltip({
-      show: true,
-      x: info.jsEvent.pageX,
-      y: info.jsEvent.pageY,
-      content: { work, issue }
-    });
+    try {
+      const payload = {
+        ...formData,
+        date: selectedDate,
+        summary: formData.work.substring(0, 10) + "..."
+      };
+      await axios.post('http://localhost:8000/diaries', payload);
+      await fetchDiaries();
+      setIsModalOpen(false);
+    } catch (error) {
+      alert("保存に失敗しました");
+    }
   };
-  
+
+  const handleDelete = async () => {
+    if (!window.confirm(`${selectedDate} の記録を削除しますか？`)) return;
+
+    try {
+      await axios.delete(`http://localhost:8000/diaries/${selectedDate}`);
+      await fetchDiaries(); // カレンダーを更新
+      setIsModalOpen(false); // モーダルを閉じる
+    } catch (error) {
+      console.error("削除に失敗しました", error);
+    }
+  };
 
   return (
     <div className="relative">
       <div className="bg-white p-6 rounded-2xl shadow-xl border border-slate-200">
+        <style>{`
+          /* 1. マス全体のホバー（データがない日も反応させる） */
+          .fc-daygrid-day:hover {
+            background-color: rgba(241, 245, 249, 0.6) !important;
+            cursor: pointer;
+          }
+
+          /* 2. 青い帯（イベント）を最前面に。z-indexを極端に上げます */
+          .fc-event {
+            z-index: 100 !important;
+            cursor: pointer !important;
+            pointer-events: auto !important; /* 確実にクリックを通す */
+          }
+
+          /* 3. 重要：帯の中の「文字」がクリックを邪魔しないように「透過」させる */
+          /* これにより、クリック判定は必ず「帯の枠自体」に届きます */
+          .fc-event-main, .fc-event-title, .fc-event-time {
+            pointer-events: none !important;
+          }
+
+          /* 4. カレンダー内部の他のレイヤーがクリックを吸い取らないように設定 */
+          .fc-daygrid-day-frame, .fc-daygrid-day-events {
+            pointer-events: auto !important;
+          }
+        `}</style>
+
         <FullCalendar
           plugins={[dayGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
           locales={['ja']}
           locale="ja"
-          events={mockDiaries.map(d => ({
+          height="auto"
+          // 日付の数字部分のリンクを無効化（クリック判定を安定させるため）
+          navLinks={false}
+
+          events={diaries.map(d => ({
             title: d.summary,
             start: d.date,
-            extendedProps: { ...d }
+            extendedProps: { ...d },
+            className: "bg-blue-600 border-none text-white p-1 rounded text-xs shadow-sm"
           }))}
+
+          // データがない場所をクリック
           dateClick={(arg) => {
-            // handleMouseLeave(); 
             handleOpenModal(arg.dateStr);
           }}
-          eventClick={(info) => handleOpenModal(info.event.startStr)}
-          eventMouseEnter={handleMouseEnter}
-          eventMouseLeave={() => setTooltip({ ...prev, show: false })}
-          height="auto"
-          eventClassNames="cursor-pointer bg-blue-600 border-none text-white p-1 rounded text-xs"
+
+          // ★データがある場所（青い帯）をクリック
+          eventClick={(info) => {
+            info.jsEvent.preventDefault();
+            info.jsEvent.stopPropagation(); // 重なりによる二重発火を防止
+            handleOpenModal(info.event.startStr);
+          }}
+
+          // ホバー（表示）
+          eventMouseEnter={(info) => {
+            const { work, issue } = info.event.extendedProps;
+            setTooltip({
+              show: true,
+              x: info.jsEvent.clientX,
+              y: info.jsEvent.clientY,
+              content: { work, issue }
+            });
+          }}
+
+          // ホバー（非表示）
+          eventMouseLeave={() => setTooltip({ show: false, x: 0, y: 0, content: {} })}
+          dayMouseEnter={() => setTooltip({ show: false, x: 0, y: 0, content: {} })}
         />
       </div>
 
-      {/* --- カスタムツールチップ --- */}
-      {tooltip.show && (
-        <div 
-          className="fixed z-[100] pointer-events-none bg-slate-800 text-white p-3 rounded-lg shadow-xl text-sm max-w-xs"
-          style={{ top: tooltip.y + 10, left: tooltip.x + 10 }}
+      {/* ツールチップ表示 */}
+      {tooltip.show && createPortal(
+        <div
+          className="fixed pointer-events-none bg-slate-800 text-white p-4 rounded-xl shadow-2xl text-sm max-w-xs border border-slate-600"
+          style={{
+            top: tooltip.y + 25, // マウスから少し離す（重要！）
+            left: tooltip.x + 25,
+            userSelect: 'none',    // テキスト選択も無効化
+            zIndex: 999999 // 圧倒的な最前面
+          }}
         >
-          <div className="font-bold text-blue-400 mb-1">【業務】</div>
-          <div className="mb-2">{tooltip.content.work}</div>
-          <div className="font-bold text-orange-400 mb-1">【課題】</div>
-          <div>{tooltip.content.issue}</div>
-        </div>
+          <div className="font-bold text-blue-400 mb-1 border-b border-slate-600 pb-1 text-[10px] uppercase tracking-wider">Work</div>
+          <div className="mb-2 leading-relaxed">{tooltip.content.work}</div>
+          <div className="font-bold text-orange-400 mb-1 border-b border-slate-600 pb-1 text-[10px] uppercase tracking-wider">Issue</div>
+          <div className="leading-relaxed">{tooltip.content.issue}</div>
+        </div>,
+        document.body // bodyの直下にレンダリングする
       )}
 
-      {/* --- 編集ダイアログ（モーダル） --- */}
+      {/* --- 修正ポイント：ラベル付きモーダル --- */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-200">
-            <div className="bg-blue-600 p-4 flex justify-between items-center">
-              <h2 className="text-white font-bold text-lg">{selectedDate} の業務記録</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-white hover:text-blue-200 text-xl">✕</button>
-            </div>
-            
-            <div className="p-6 space-y-4">
-              {/* 1. 実施した業務 */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">実施した業務</label>
-                <textarea 
-                  className="w-full border border-gray-300 rounded-lg p-2 h-20 focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.work}
-                  onChange={(e) => setFormData({...formData, work: e.target.value})}
-                  placeholder="何を行いましたか？"
-                />
+            {/* ヘッダー */}
+            <div className="bg-slate-900 p-4 flex justify-between items-center text-white">
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Daily Report</span>
+                <h2 className="font-bold text-lg leading-tight">{selectedDate}</h2>
               </div>
-
-              {/* 2. 課題点 */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">課題点</label>
-                <textarea 
-                  className="w-full border border-gray-300 rounded-lg p-2 h-20 focus:ring-2 focus:ring-orange-500 outline-none"
-                  value={formData.issue}
-                  onChange={(e) => setFormData({...formData, issue: e.target.value})}
-                  placeholder="直面した課題は？"
-                />
-              </div>
-
-              {/* 3. 解決した方法 */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">課題を解決した方法</label>
-                <textarea 
-                  className="w-full border border-gray-300 rounded-lg p-2 h-20 focus:ring-2 focus:ring-green-500 outline-none"
-                  value={formData.solution}
-                  onChange={(e) => setFormData({...formData, solution: e.target.value})}
-                  placeholder="どうやって解決しましたか？"
-                />
-              </div>
-            </div>
-
-            <div className="bg-gray-50 p-4 flex justify-end space-x-3 border-t">
-              <button 
+              <button
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-medium"
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+              >✕</button>
+            </div>
+
+            {/* フォーム内容 */}
+            <div className="p-6 space-y-5">
+              {/* 業務内容 */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-bold text-slate-700 flex items-center">
+                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
+                  業務内容
+                </label>
+                <textarea
+                  className="w-full border border-slate-200 p-3 rounded-xl h-24 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm leading-relaxed"
+                  value={formData.work}
+                  onChange={(e) => setFormData({ ...formData, work: e.target.value })}
+                />
+              </div>
+
+              {/* 課題点 */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-bold text-slate-700 flex items-center">
+                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-2"></span>
+                  課題点
+                </label>
+                <textarea
+                  className="w-full border border-slate-200 p-3 rounded-xl h-20 outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-sm leading-relaxed"
+                  value={formData.issue}
+                  onChange={(e) => setFormData({ ...formData, issue: e.target.value })}
+                />
+              </div>
+
+              {/* 解決策 */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-bold text-slate-700 flex items-center">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>
+                  解決策
+                </label>
+                <textarea
+                  className="w-full border border-slate-200 p-3 rounded-xl h-20 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm leading-relaxed"
+                  value={formData.solution}
+                  onChange={(e) => setFormData({ ...formData, solution: e.target.value })}
+                />
+              </div>
+            </div>
+
+            {/* フッターボタン */}
+            {/* 左側に削除ボタン（既存データがある場合のみ表示） */}
+            <div>
+              {diaries.some(d => d.date === selectedDate) && (
+                <button
+                  onClick={handleDelete}
+                  className="px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  削除する
+                </button>
+              )}
+            </div>
+            <div className="p-4 bg-slate-50 flex justify-end space-x-3">
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
               >
                 キャンセル
               </button>
-              <button 
-                onClick={() => {
-                  console.log("保存データ:", formData);
-                  alert("保存しました（モックのためログ出力のみ）");
-                  setIsModalOpen(false);
-                }}
-                className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 shadow-md"
+              <button
+                onClick={handleSave}
+                className="px-8 py-2 bg-blue-600 text-white text-sm rounded-lg font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all active:scale-95"
               >
-                保存
+                保存する
               </button>
             </div>
           </div>
