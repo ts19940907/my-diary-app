@@ -11,7 +11,9 @@ app = FastAPI()
 # ★重要：React（ポート5173）からのアクセスを許可する設定
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "https://feature-deploy-aws.d2lez1n8yk1q7y.amplifyapp.com",
+        "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

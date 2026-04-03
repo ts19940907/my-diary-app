@@ -17,7 +17,8 @@ const Calendar = () => {
 
   const fetchDiaries = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/diaries');
+      // const response = await axios.get('http://localhost:8000/diaries');
+      const response = await axios.get('https://4pvpjdgdrd.ap-northeast-1.awsapprunner.com/diaries');
       setDiaries(response.data);
     } catch (error) { console.error("取得失敗", error); }
   };
@@ -45,7 +46,8 @@ const Calendar = () => {
         date: selectedDate,
         summary: formData.work.substring(0, 10) + "..."
       };
-      await axios.post('http://localhost:8000/diaries', payload);
+      // await axios.post('http://localhost:8000/diaries', payload);
+      await axios.post('https://4pvpjdgdrd.ap-northeast-1.awsapprunner.com/diaries', payload);
       await fetchDiaries();
       setIsModalOpen(false);
     } catch (error) {
@@ -57,7 +59,8 @@ const Calendar = () => {
     if (!window.confirm(`${selectedDate} の記録を削除しますか？`)) return;
 
     try {
-      await axios.delete(`http://localhost:8000/diaries/${selectedDate}`);
+      // await axios.delete(`http://localhost:8000/diaries/${selectedDate}`);
+      await axios.delete(`https://4pvpjdgdrd.ap-northeast-1.awsapprunner.com/diaries/${selectedDate}`);
       await fetchDiaries(); // カレンダーを更新
       setIsModalOpen(false); // モーダルを閉じる
     } catch (error) {
