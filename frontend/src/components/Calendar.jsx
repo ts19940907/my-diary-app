@@ -70,9 +70,6 @@ const Calendar = ({ getAccessToken }) => {
       await axios.delete(`${API_URL}/diaries/${selectedDate}`, {
         headers: { Authorization: `Bearer ${token}` } // ★追加
       });
-      // await axios.delete(`https://4pvpjdgdrd.ap-northeast-1.awsapprunner.com/diaries/${selectedDate}`, {
-      //   headers: { Authorization: `Bearer ${token}` } // ★追加
-      // });
       await fetchDiaries(); // カレンダーを更新
       setIsModalOpen(false); // モーダルを閉じる
     } catch (error) {
@@ -118,7 +115,7 @@ const Calendar = ({ getAccessToken }) => {
           // 日付の数字部分のリンクを無効化（クリック判定を安定させるため）
           navLinks={false}
 
-          events={diaries.map(d => ({
+          events={diaries?.map(d => ({
             title: d.summary,
             start: d.date,
             extendedProps: { ...d },
@@ -234,7 +231,7 @@ const Calendar = ({ getAccessToken }) => {
             {/* フッターボタン */}
             {/* 左側に削除ボタン（既存データがある場合のみ表示） */}
             <div>
-              {diaries.some(d => d.date === selectedDate) && (
+              {diaries?.some(d => d.date === selectedDate) && (
                 <button
                   onClick={handleDelete}
                   className="px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
