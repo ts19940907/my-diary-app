@@ -45,12 +45,14 @@ def verify_token(auth: HTTPAuthorizationCredentials = Security(security)):
 
 app = FastAPI()
 
+# 環境変数からカンマ区切りの文字列を取得し、リストに変換する
+allow_origins_env = os.getenv("ALLOW_ORIGINS")
+origins = allow_origins_env.split(",")
+
 # ★重要：React（ポート5173）からのアクセスを許可する設定
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://feature-deploy-aws.d2lez1n8yk1q7y.amplifyapp.com",
-        "http://localhost:5173"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

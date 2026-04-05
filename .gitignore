@@ -2,7 +2,8 @@
 backend/__pycache__/
 backend/.venv/
 backend/.env
-frontend/.env
+frontend/.env.development
+frontend/.env.production
 
 # SQLite Database (ローカルのデータはプッシュしない)
 backend/*.db
