@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useAuth } from 'react';
 import { createPortal } from 'react-dom';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import axios from 'axios';
 
-const Calendar = () => {
+const Calendar = ({ getAccessToken }) => {
   const [diaries, setDiaries] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
@@ -14,11 +14,18 @@ const Calendar = () => {
 
   const diariesRef = useRef([]);
   useEffect(() => { diariesRef.current = diaries; }, [diaries]);
+  // const { getAccessToken } = useAuth();
 
   const fetchDiaries = async () => {
     try {
-      // const response = await axios.get('http://localhost:8000/diaries');
-      const response = await axios.get('https://4pvpjdgdrd.ap-northeast-1.awsapprunner.com/diaries');
+      const token = await getAccessToken();
+      console.log("🔥 取得したJWTトークン:", token);
+      const response = await axios.get('http://localhost:8000/diaries', {
+        headers: { Authorization: `Bearer ${token}` } // ★追加
+      });
+      // const response = await axios.get('https://4pvpjdgdrd.ap-northeast-1.awsapprunner.com/diaries', {
+      //   headers: { Authorization: `Bearer ${token}` } // ★追加
+      // });
       setDiaries(response.data);
     } catch (error) { console.error("取得失敗", error); }
   };
@@ -40,17 +47,24 @@ const Calendar = () => {
       return;
     }
 
+    const token = await getAccessToken();
+
     try {
       const payload = {
         ...formData,
         date: selectedDate,
         summary: formData.work.substring(0, 10) + "..."
       };
-      // await axios.post('http://localhost:8000/diaries', payload);
-      await axios.post('https://4pvpjdgdrd.ap-northeast-1.awsapprunner.com/diaries', payload);
+      await axios.post('http://localhost:8000/diaries', payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // await axios.post('https://4pvpjdgdrd.ap-northeast-1.awsapprunner.com/diaries', payload, {
+      //   headers: { Authorization: `Bearer ${token}` }
+      // });
       await fetchDiaries();
       setIsModalOpen(false);
     } catch (error) {
+      console.log(error)
       alert("保存に失敗しました");
     }
   };
@@ -59,8 +73,13 @@ const Calendar = () => {
     if (!window.confirm(`${selectedDate} の記録を削除しますか？`)) return;
 
     try {
-      // await axios.delete(`http://localhost:8000/diaries/${selectedDate}`);
-      await axios.delete(`https://4pvpjdgdrd.ap-northeast-1.awsapprunner.com/diaries/${selectedDate}`);
+      const token = await getAccessToken();
+      await axios.delete(`http://localhost:8000/diaries/${selectedDate}`, {
+        headers: { Authorization: `Bearer ${token}` } // ★追加
+      });
+      // await axios.delete(`https://4pvpjdgdrd.ap-northeast-1.awsapprunner.com/diaries/${selectedDate}`, {
+      //   headers: { Authorization: `Bearer ${token}` } // ★追加
+      // });
       await fetchDiaries(); // カレンダーを更新
       setIsModalOpen(false); // モーダルを閉じる
     } catch (error) {

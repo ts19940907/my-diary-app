@@ -10,9 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aws-amplify/ui-react": "^6.15.2",
     "@fullcalendar/daygrid": "^6.1.20",
     "@fullcalendar/interaction": "^6.1.20",
     "@fullcalendar/react": "^6.1.20",
+    "aws-amplify": "^6.16.3",
     "axios": "^1.14.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"

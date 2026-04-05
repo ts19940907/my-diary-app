@@ -10,3 +10,4 @@ class Diary(Base):
     issue = Column(Text)      # 課題点
     solution = Column(Text)   # 解決策
     summary = Column(String)  # カレンダー表示用の要約
+    user_email = Column(String, index=True)
