@@ -1,5 +1,7 @@
 import models, schemas, database
 import requests
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, status, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,10 +11,13 @@ from typing import List
 
 models.Base.metadata.create_all(bind=database.engine)
 
+# .envファイルを読み込む
+load_dotenv()
+
 # 設定値
-REGION = "ap-northeast-1"
-USER_POOL_ID = "ap-northeast-1_aF0Y5jHjm"
-APP_CLIENT_ID = "21mepukacpmgr0o94t9lpbf97t"
+REGION = os.getenv("REGION")
+USER_POOL_ID = os.getenv("USER_POOL_ID")
+APP_CLIENT_ID = os.getenv("APP_CLIENT_ID")
 # Cognitoの公開鍵URL
 JWKS_URL = f"https://cognito-idp.{REGION}.amazonaws.com/{USER_POOL_ID}/.well-known/jwks.json"
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useAuth } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -13,19 +13,15 @@ const Calendar = ({ getAccessToken }) => {
   const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, content: {} });
 
   const diariesRef = useRef([]);
+  const API_URL = import.meta.env.VITE_APP_API_URL;
   useEffect(() => { diariesRef.current = diaries; }, [diaries]);
-  // const { getAccessToken } = useAuth();
 
   const fetchDiaries = async () => {
     try {
       const token = await getAccessToken();
-      console.log("🔥 取得したJWTトークン:", token);
-      const response = await axios.get('http://localhost:8000/diaries', {
-        headers: { Authorization: `Bearer ${token}` } // ★追加
+      const response = await axios.get(`${API_URL}/diaries`, {
+        headers: { Authorization: `Bearer ${token}` } 
       });
-      // const response = await axios.get('https://4pvpjdgdrd.ap-northeast-1.awsapprunner.com/diaries', {
-      //   headers: { Authorization: `Bearer ${token}` } // ★追加
-      // });
       setDiaries(response.data);
     } catch (error) { console.error("取得失敗", error); }
   };
@@ -55,12 +51,9 @@ const Calendar = ({ getAccessToken }) => {
         date: selectedDate,
         summary: formData.work.substring(0, 10) + "..."
       };
-      await axios.post('http://localhost:8000/diaries', payload, {
+      await axios.post(`${API_URL}/diaries`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // await axios.post('https://4pvpjdgdrd.ap-northeast-1.awsapprunner.com/diaries', payload, {
-      //   headers: { Authorization: `Bearer ${token}` }
-      // });
       await fetchDiaries();
       setIsModalOpen(false);
     } catch (error) {
@@ -74,7 +67,7 @@ const Calendar = ({ getAccessToken }) => {
 
     try {
       const token = await getAccessToken();
-      await axios.delete(`http://localhost:8000/diaries/${selectedDate}`, {
+      await axios.delete(`${API_URL}/diaries/${selectedDate}`, {
         headers: { Authorization: `Bearer ${token}` } // ★追加
       });
       // await axios.delete(`https://4pvpjdgdrd.ap-northeast-1.awsapprunner.com/diaries/${selectedDate}`, {

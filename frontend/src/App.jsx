@@ -8,8 +8,8 @@ import Calendar from './components/Calendar';
 Amplify.configure({
   Auth: {
     Cognito: {
-      userPoolId: 'ap-northeast-1_aF0Y5jHjm',
-      userPoolClientId: '21mepukacpmgr0o94t9lpbf97t',
+      userPoolId: import.meta.env.VITE_USER_POOL_ID,
+      userPoolClientId: import.meta.env.VITE_CLIENT_ID,
       loginWith: {
         email: true // メールアドレスでログインする場合に必須
       }
