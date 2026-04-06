@@ -5,3 +5,4 @@ pydantic
 requests
 python-jose[cryptography]
 python-dotenv
+psycopg2-binary
