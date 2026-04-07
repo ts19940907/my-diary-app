@@ -1,5 +1,7 @@
 import models, schemas, database
 import requests
+import json
+import boto3
 import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException, status, Security
@@ -42,6 +44,32 @@ def verify_token(auth: HTTPAuthorizationCredentials = Security(security)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="無効なトークンです"
         )
+    
+def sync_to_s3_backup(db: Session):
+    # DBから全データを「日付順」に取得 (models.Diary.date.asc() で古い順)
+    # 新しい順にしたい場合は .desc() を使います
+    all_diaries = db.query(models.Diary).order_by(models.Diary.date.asc()).all()
+    
+    all_data = [
+        {
+            "id": d.id, 
+            "実施した業務": d.work, 
+            "課題": d.issue, 
+            "解決策": d.solution, 
+            "日付": str(d.date)
+        } 
+        for d in all_diaries
+    ]
+
+    if database.lambda_client:
+        try:
+            database.lambda_client.invoke(
+                FunctionName='diary-s3-backup-function',
+                InvocationType='Event',
+                Payload=json.dumps(all_data)
+            )
+        except Exception as e:
+            print(f"S3 Backup Failed: {e}")
 
 app = FastAPI()
 
@@ -97,13 +125,18 @@ def create_or_update_diary(
     
     db.commit()
     db.refresh(db_diary)
+
+    sync_to_s3_backup(db) # バックアップ実行
     return db_diary
 
 @app.delete("/diaries/{date}")
-def delete_diary(date: str, db: Session = Depends(database.get_db)):
+def delete_diary(date: str, db: Session = Depends(database.get_db), current_user: dict = Depends(verify_token)):
     db_diary = db.query(models.Diary).filter(models.Diary.date == date).first()
     if not db_diary:
         raise HTTPException(status_code=404, detail="Diary not found")
     db.delete(db_diary)
     db.commit()
+
+    sync_to_s3_backup(db)
+
     return {"message": "Deleted successfully"}

@@ -6,3 +6,4 @@ requests
 python-jose[cryptography]
 python-dotenv
 psycopg2-binary
+boto3
