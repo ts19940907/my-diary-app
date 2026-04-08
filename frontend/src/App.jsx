@@ -46,13 +46,15 @@ function App() {
       {({ signOut, user }) => (
         <div className="min-h-screen bg-slate-50 py-12 px-4">
           <div className="max-w-5xl mx-auto">
-            <header style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem' }}>
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">
+            <header className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4">
+              <h1 className="text-5xl font-black text-slate-900 tracking-tight">
                 Work Diary <span className="text-blue-600">v1.0</span>
               </h1>
-              <div>
+              <div className="flex sm:flex-row flex-col items-center">
                 <span>ようこそ、{user.signInDetails?.loginId} さん</span>
-                <button onClick={signOut} style={{ marginLeft: '10px' }}>ログアウト</button>
+                <button className="w-[40%] sm:w-auto mt-[10px] sm:mt-[0px] sm:ml-[10px] sm:px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold transition-all text-white" onClick={signOut}>
+                  ログアウト
+                </button>
               </div>
             </header>
 

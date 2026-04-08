@@ -20,7 +20,7 @@ const Calendar = ({ getAccessToken }) => {
     try {
       const token = await getAccessToken();
       const response = await axios.get(`${API_URL}/diaries`, {
-        headers: { Authorization: `Bearer ${token}` } 
+        headers: { Authorization: `Bearer ${token}` }
       });
       setDiaries(response.data);
     } catch (error) { console.error("取得失敗", error); }
@@ -173,9 +173,12 @@ const Calendar = ({ getAccessToken }) => {
       {/* --- 修正ポイント：ラベル付きモーダル --- */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-200">
-            {/* ヘッダー */}
-            <div className="bg-slate-900 p-4 flex justify-between items-center text-white">
+
+          {/* モーダル本体: flex-col を明示し、高さを 90vh に制限 */}
+          <div className="bg-white w-[90%] h-[90%] rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in duration-200 flex flex-col">
+
+            {/* ヘッダー: flex-shrink-0 で固定 */}
+            <div className="bg-slate-900 p-4 flex justify-between items-center text-white flex-shrink-0">
               <div className="flex flex-col">
                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Daily Report</span>
                 <h2 className="font-bold text-lg leading-tight">{selectedDate}</h2>
@@ -186,8 +189,8 @@ const Calendar = ({ getAccessToken }) => {
               >✕</button>
             </div>
 
-            {/* フォーム内容 */}
-            <div className="p-6 space-y-5">
+            {/* フォーム内容: ここに flex-1 と overflow-y-auto を必ず入れる */}
+            <div className="p-6 space-y-5 overflow-y-auto flex-1 min-h-0">
               {/* 業務内容 */}
               <div className="space-y-1.5">
                 <label className="text-sm font-bold text-slate-700 flex items-center">
@@ -195,7 +198,7 @@ const Calendar = ({ getAccessToken }) => {
                   業務内容
                 </label>
                 <textarea
-                  className="w-full border border-slate-200 p-3 rounded-xl h-24 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm leading-relaxed"
+                  className="w-full border border-slate-200 p-3 rounded-xl h-30 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm leading-relaxed"
                   value={formData.work}
                   onChange={(e) => setFormData({ ...formData, work: e.target.value })}
                 />
@@ -208,7 +211,7 @@ const Calendar = ({ getAccessToken }) => {
                   課題点
                 </label>
                 <textarea
-                  className="w-full border border-slate-200 p-3 rounded-xl h-20 outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-sm leading-relaxed"
+                  className="w-full border border-slate-200 p-3 rounded-xl h-40 outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all text-sm leading-relaxed"
                   value={formData.issue}
                   onChange={(e) => setFormData({ ...formData, issue: e.target.value })}
                 />
@@ -221,38 +224,39 @@ const Calendar = ({ getAccessToken }) => {
                   解決策
                 </label>
                 <textarea
-                  className="w-full border border-slate-200 p-3 rounded-xl h-20 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm leading-relaxed"
+                  className="w-full border border-slate-200 p-3 rounded-xl h-40 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-sm leading-relaxed"
                   value={formData.solution}
                   onChange={(e) => setFormData({ ...formData, solution: e.target.value })}
                 />
               </div>
             </div>
 
-            {/* フッターボタン */}
-            {/* 左側に削除ボタン（既存データがある場合のみ表示） */}
-            <div>
-              {diaries?.some(d => d.date === selectedDate) && (
+            {/* フッター: 下部に固定 */}
+            <div className="p-4 bg-slate-50 flex justify-between items-center border-t border-slate-100 flex-shrink-0">
+              <div>
+                {diaries?.some(d => d.date === selectedDate) && (
+                  <button
+                    onClick={handleDelete}
+                    className="px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    削除
+                  </button>
+                )}
+              </div>
+              <div className="flex space-x-3">
                 <button
-                  onClick={handleDelete}
-                  className="px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
                 >
-                  削除する
+                  キャンセル
                 </button>
-              )}
-            </div>
-            <div className="p-4 bg-slate-50 flex justify-end space-x-3">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
-              >
-                キャンセル
-              </button>
-              <button
-                onClick={handleSave}
-                className="px-8 py-2 bg-blue-600 text-white text-sm rounded-lg font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all active:scale-95"
-              >
-                保存する
-              </button>
+                <button
+                  onClick={handleSave}
+                  className="px-8 py-2 bg-blue-600 text-white text-sm rounded-lg font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all active:scale-95"
+                >
+                  保存する
+                </button>
+              </div>
             </div>
           </div>
         </div>
