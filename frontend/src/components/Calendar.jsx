@@ -4,6 +4,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import axios from 'axios';
+import FullPageSpinner from './FullPageSpinner';
 
 const Calendar = ({ getAccessToken }) => {
   const [diaries, setDiaries] = useState([]);
@@ -11,22 +12,40 @@ const Calendar = ({ getAccessToken }) => {
   const [selectedDate, setSelectedDate] = useState('');
   const [formData, setFormData] = useState({ work: '', issue: '', solution: '' });
   const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, content: {} });
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
   const diariesRef = useRef([]);
   const API_URL = import.meta.env.VITE_APP_API_URL;
   useEffect(() => { diariesRef.current = diaries; }, [diaries]);
 
   const fetchDiaries = async () => {
-    try {
-      const token = await getAccessToken();
-      const response = await axios.get(`${API_URL}/diaries`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setDiaries(response.data);
-    } catch (error) { console.error("取得失敗", error); }
+    // try-catch を外すか、エラーを throw するようにします
+    const token = await getAccessToken();
+    const response = await axios.get(`${API_URL}/diaries`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setDiaries(response.data);
   };
 
-  useEffect(() => { fetchDiaries(); }, []);
+  // useEffect(() => { fetchDiaries(); }, []);
+  useEffect(() => {
+    const loadData = async () => {
+      // 念のため開始時に true に（初期値が true なら省略可）
+      setIsInitialLoading(true);
+      try {
+        // 既存の取得処理を呼び出す
+        await fetchDiaries();
+      } catch (error) {
+        console.error("初期データの取得に失敗しました", error);
+      } finally {
+        // 成功しても失敗しても、最後にローディングを解除
+        setIsInitialLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   const handleOpenModal = (dateStr) => {
     setTooltip({ show: false, x: 0, y: 0, content: {} }); // モーダルを開く時にツールチップを消去
@@ -43,9 +62,9 @@ const Calendar = ({ getAccessToken }) => {
       return;
     }
 
-    const token = await getAccessToken();
-
+    setIsActionLoading(true); // 💡 ローディング開始
     try {
+      const token = await getAccessToken();
       const payload = {
         ...formData,
         date: selectedDate,
@@ -57,23 +76,28 @@ const Calendar = ({ getAccessToken }) => {
       await fetchDiaries();
       setIsModalOpen(false);
     } catch (error) {
-      console.log(error)
+      console.error(error);
       alert("保存に失敗しました");
+    } finally {
+      setIsActionLoading(false); // 💡 成功・失敗に関わらず終了
     }
   };
 
   const handleDelete = async () => {
     if (!window.confirm(`${selectedDate} の記録を削除しますか？`)) return;
 
+    setIsActionLoading(true); // 💡 ローディング開始
     try {
       const token = await getAccessToken();
       await axios.delete(`${API_URL}/diaries/${selectedDate}`, {
-        headers: { Authorization: `Bearer ${token}` } // ★追加
+        headers: { Authorization: `Bearer ${token}` }
       });
-      await fetchDiaries(); // カレンダーを更新
-      setIsModalOpen(false); // モーダルを閉じる
+      await fetchDiaries();
+      setIsModalOpen(false);
     } catch (error) {
       console.error("削除に失敗しました", error);
+    } finally {
+      setIsActionLoading(false); // 💡 終了
     }
   };
 
@@ -237,9 +261,11 @@ const Calendar = ({ getAccessToken }) => {
                 {diaries?.some(d => d.date === selectedDate) && (
                   <button
                     onClick={handleDelete}
-                    className="px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    disabled={isActionLoading} // 💡 制御
+                    className={`px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors ${isActionLoading ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
                   >
-                    削除
+                    {isActionLoading ? "処理中..." : "削除"}
                   </button>
                 )}
               </div>
@@ -252,15 +278,25 @@ const Calendar = ({ getAccessToken }) => {
                 </button>
                 <button
                   onClick={handleSave}
-                  className="px-8 py-2 bg-blue-600 text-white text-sm rounded-lg font-bold hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition-all active:scale-95"
+                  disabled={isActionLoading} // 💡 制御
+                  className={`px-8 py-2 bg-blue-600 text-white text-sm rounded-lg font-bold shadow-lg shadow-blue-500/30 transition-all active:scale-95 ${isActionLoading ? 'bg-blue-400 cursor-not-allowed' : 'hover:bg-blue-700'
+                    }`}
                 >
-                  保存する
+                  {isActionLoading ? (
+                    <span className="flex items-center">
+                      <svg className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full" viewBox="0 0 24 24"></svg>
+                      保存中...
+                    </span>
+                  ) : (
+                    "保存する"
+                  )}
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
+      {(isInitialLoading || isActionLoading) && <FullPageSpinner />}
     </div>
   );
 };

@@ -73,17 +73,6 @@ def sync_to_s3_backup(db: Session):
 
 app = FastAPI()
 
-# Uvicornのロガーを取得（App Runnerのログに出力するため）
-logger = logging.getLogger("uvicorn")
-
-allow_origin_regex = os.getenv("ALLOW_ORIGIN_REGEX")
-
-# デバッグ用ログ： [ ] で囲むことで、前後のスペースの有無も分かります
-logger.info(f"--- CORS DEBUG START ---")
-logger.info(f"ALLOW_ORIGIN_REGEX: [{allow_origin_regex}]")
-logger.info(f"TYPE: {type(allow_origin_regex)}")
-logger.info(f"--- CORS DEBUG END ---")
-
 # ★重要：React（ポート5173）からのアクセスを許可する設定
 app.add_middleware(
     CORSMiddleware,
