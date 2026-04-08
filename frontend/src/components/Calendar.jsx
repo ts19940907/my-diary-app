@@ -5,6 +5,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import axios from 'axios';
 import FullPageSpinner from './FullPageSpinner';
+import ConfirmDialog from './ConfirmDialog';
 import { toast } from 'react-hot-toast';
 
 const Calendar = ({ getAccessToken }) => {
@@ -21,6 +22,41 @@ const Calendar = ({ getAccessToken }) => {
 
   const diariesRef = useRef([]);
   const API_URL = import.meta.env.VITE_APP_API_URL;
+  const [dialogConfig, setDialogConfig] = useState({ 
+    isOpen: false, title: '', message: '', onConfirm: () => {}, showCancel: true, type: 'info' 
+  });
+
+  const closeDialog = () => setDialogConfig({ ...dialogConfig, isOpen: false });
+
+  // --- 削除時の呼び出し ---
+  const handleDeleteClick = () => {
+    setDialogConfig({
+      isOpen: true,
+      title: "削除の確認",
+      message: `${selectedDate} の記録を削除しますか？この操作は取り消せません。`,
+      showCancel: true,
+      type: 'danger',
+      confirmText: "削除する",
+      onConfirm: async () => {
+        closeDialog();
+        await handleDelete(); // 実際の削除処理
+      },
+      onCancel: closeDialog
+    });
+  };
+
+  // --- エラー時の呼び出し ---
+  const handleError = (error, msg) => {
+    setDialogConfig({
+      isOpen: true,
+      title: "エラーが発生しました",
+      message: msg,
+      showCancel: false, // キャンセルボタンを隠し、OKボタンのみにする
+      confirmText: "OK",
+      onConfirm: closeDialog,
+      type: 'info'
+    });
+  };
   useEffect(() => { diariesRef.current = diaries; }, [diaries]);
 
   const fetchDiaries = async () => {
@@ -41,7 +77,7 @@ const Calendar = ({ getAccessToken }) => {
         // 既存の取得処理を呼び出す
         await fetchDiaries();
       } catch (error) {
-        console.error("初期データの取得に失敗しました", error);
+        handleError(error, "初期データの取得に失敗しました");
       } finally {
         // 成功しても失敗しても、最後にローディングを解除
         setIsInitialLoading(false);
@@ -87,15 +123,14 @@ const Calendar = ({ getAccessToken }) => {
       await fetchDiaries();
       setIsModalOpen(false);
     } catch (error) {
-      console.error(error);
-      alert("保存に失敗しました");
+        handleError(error, "保存に失敗しました");
     } finally {
       setIsActionLoading(false); // 💡 成功・失敗に関わらず終了
     }
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(`${selectedDate} の記録を削除しますか？`)) return;
+    // if (!window.confirm(`${selectedDate} の記録を削除しますか？`)) return;
 
     setIsActionLoading(true); // 💡 ローディング開始
     try {
@@ -107,7 +142,7 @@ const Calendar = ({ getAccessToken }) => {
       await fetchDiaries();
       setIsModalOpen(false);
     } catch (error) {
-      console.error("削除に失敗しました", error);
+        handleError(error, "削除に失敗しました");
     } finally {
       setIsActionLoading(false); // 💡 終了
     }
@@ -277,7 +312,7 @@ const Calendar = ({ getAccessToken }) => {
               <div>
                 {isExistingData && (
                   <button
-                    onClick={handleDelete}
+                    onClick={handleDeleteClick}
                     disabled={isActionLoading || !isExistingData} // 念のため条件追加
                     className={`px-4 py-2 text-sm font-bold text-red-600 rounded-lg transition-colors ${isActionLoading ? 'opacity-50' : 'hover:bg-red-50'
                       }`}
@@ -309,6 +344,7 @@ const Calendar = ({ getAccessToken }) => {
         </div>
       )}
       {(isInitialLoading || isActionLoading) && <FullPageSpinner />}
+      <ConfirmDialog {...dialogConfig} />
     </div>
   );
 };
