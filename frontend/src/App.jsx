@@ -3,6 +3,7 @@ import { Authenticator } from '@aws-amplify/ui-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import '@aws-amplify/ui-react/styles.css';
 import Calendar from './components/Calendar';
+import { Toaster } from 'react-hot-toast';
 
 // 1. Cognitoの設定（取得したIDに書き換えてください）
 Amplify.configure({
@@ -70,6 +71,7 @@ function App() {
               &copy; 2026 Diary Tool - AWS SAP Study Project
             </footer>
           </div>
+          <Toaster position="top-right" reverseOrder={false} />
         </div>
       )
       }

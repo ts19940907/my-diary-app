@@ -5,6 +5,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import axios from 'axios';
 import FullPageSpinner from './FullPageSpinner';
+import { toast } from 'react-hot-toast';
 
 const Calendar = ({ getAccessToken }) => {
   const [diaries, setDiaries] = useState([]);
@@ -73,6 +74,13 @@ const Calendar = ({ getAccessToken }) => {
       await axios.post(`${API_URL}/diaries`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      toast.success('保存しました！', {
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
       await fetchDiaries();
       setIsModalOpen(false);
     } catch (error) {
@@ -92,6 +100,7 @@ const Calendar = ({ getAccessToken }) => {
       await axios.delete(`${API_URL}/diaries/${selectedDate}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      toast.success('削除しました');
       await fetchDiaries();
       setIsModalOpen(false);
     } catch (error) {
