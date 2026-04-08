@@ -7,6 +7,7 @@ import axios from 'axios';
 import FullPageSpinner from './FullPageSpinner';
 import ConfirmDialog from './ConfirmDialog';
 import { toast } from 'react-hot-toast';
+import * as JapaneseHolidays from 'japanese-holidays';
 
 const Calendar = ({ getAccessToken }) => {
   const [diaries, setDiaries] = useState([]);
@@ -19,11 +20,14 @@ const Calendar = ({ getAccessToken }) => {
   const isAllEmpty = !formData.work.trim() && !formData.issue.trim() && !formData.solution.trim();
   const isWorkMissing = !formData.work.trim() && (formData.issue.trim() || formData.solution.trim());
   const isExistingData = diaries?.some(d => d.date === selectedDate);
+  const getHolidayName = (date) => {
+    return JapaneseHolidays.isHoliday(date);
+  };
 
   const diariesRef = useRef([]);
   const API_URL = import.meta.env.VITE_APP_API_URL;
-  const [dialogConfig, setDialogConfig] = useState({ 
-    isOpen: false, title: '', message: '', onConfirm: () => {}, showCancel: true, type: 'info' 
+  const [dialogConfig, setDialogConfig] = useState({
+    isOpen: false, title: '', message: '', onConfirm: () => { }, showCancel: true, type: 'info'
   });
 
   const closeDialog = () => setDialogConfig({ ...dialogConfig, isOpen: false });
@@ -123,7 +127,7 @@ const Calendar = ({ getAccessToken }) => {
       await fetchDiaries();
       setIsModalOpen(false);
     } catch (error) {
-        handleError(error, "保存に失敗しました");
+      handleError(error, "保存に失敗しました");
     } finally {
       setIsActionLoading(false); // 💡 成功・失敗に関わらず終了
     }
@@ -142,7 +146,7 @@ const Calendar = ({ getAccessToken }) => {
       await fetchDiaries();
       setIsModalOpen(false);
     } catch (error) {
-        handleError(error, "削除に失敗しました");
+      handleError(error, "削除に失敗しました");
     } finally {
       setIsActionLoading(false); // 💡 終了
     }
@@ -164,16 +168,36 @@ const Calendar = ({ getAccessToken }) => {
             cursor: pointer !important;
             pointer-events: auto !important; /* 確実にクリックを通す */
           }
-
-          /* 3. 重要：帯の中の「文字」がクリックを邪魔しないように「透過」させる */
-          /* これにより、クリック判定は必ず「帯の枠自体」に届きます */
-          .fc-event-main, .fc-event-title, .fc-event-time {
-            pointer-events: none !important;
+          
+          .fc-event-main {
+            pointer-events: auto !important;
           }
 
           /* 4. カレンダー内部の他のレイヤーがクリックを吸い取らないように設定 */
           .fc-daygrid-day-frame, .fc-daygrid-day-events {
             pointer-events: auto !important;
+          }
+          
+          .fc-day-sat { 
+            background-color: #eff6ff !important; 
+          }
+          .fc-day-sat .fc-col-header-cell-cushion,
+          .fc-day-sat .fc-daygrid-day-number {
+            color: #2563eb !important; 
+          }
+
+          .fc-day-sun { 
+            background-color: #fef2f2 !important; 
+          }
+          .fc-day-sun .fc-col-header-cell-cushion,
+          .fc-day-sun .fc-daygrid-day-number {
+            color: #dc2626 !important; 
+          }
+
+          .fc-daygrid-day-number {
+            position: relative;
+            z-index: 1; /* 数字を低く */
+            pointer-events: none; /* 数字自体はクリック不可にして、下のマスを叩かせる */
           }
         `}</style>
 
@@ -185,6 +209,15 @@ const Calendar = ({ getAccessToken }) => {
           height="auto"
           // 日付の数字部分のリンクを無効化（クリック判定を安定させるため）
           navLinks={false}
+
+          dayCellClassNames={(arg) => {
+            const holidayName = getHolidayName(arg.date);
+            if (holidayName) {
+              // ここで返したクラス名は、再描画されても維持されます
+              return ['fc-day-sun'];
+            }
+            return [];
+          }}
 
           events={diaries?.map(d => ({
             title: d.summary,
@@ -215,15 +248,11 @@ const Calendar = ({ getAccessToken }) => {
               content: { work, issue }
             });
           }}
-
-          // ホバー（非表示）
-          eventMouseLeave={() => setTooltip({ show: false, x: 0, y: 0, content: {} })}
-          dayMouseEnter={() => setTooltip({ show: false, x: 0, y: 0, content: {} })}
         />
       </div>
 
       {/* ツールチップ表示 */}
-      {tooltip.show && createPortal(
+      {tooltip.show && !isModalOpen && createPortal(
         <div
           className="fixed pointer-events-none bg-slate-800 text-white p-4 rounded-xl shadow-2xl text-sm max-w-xs border border-slate-600"
           style={{
@@ -265,7 +294,7 @@ const Calendar = ({ getAccessToken }) => {
               {/* 業務内容 */}
               <div className="space-y-1.5">
                 <label className="text-sm font-bold text-slate-700 flex items-center">
-                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
+                  <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                   業務内容
                 </label>
                 <textarea
@@ -283,7 +312,7 @@ const Calendar = ({ getAccessToken }) => {
               {/* 課題点 */}
               <div className="space-y-1.5">
                 <label className="text-sm font-bold text-slate-700 flex items-center">
-                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-2"></span>
+                  <svg className="w-4 h-4 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                   課題点
                 </label>
                 <textarea
@@ -296,7 +325,7 @@ const Calendar = ({ getAccessToken }) => {
               {/* 解決策 */}
               <div className="space-y-1.5">
                 <label className="text-sm font-bold text-slate-700 flex items-center">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-2"></span>
+                  <svg className="w-4 h-4 mr-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.674a1 1 0 00.922-.617l2.108-4.742A4 4 0 105.196 9.5l2.359 5.285a1 1 0 00.922.617z" /></svg>
                   解決策
                 </label>
                 <textarea
@@ -332,8 +361,8 @@ const Calendar = ({ getAccessToken }) => {
                   onClick={handleSave}
                   disabled={isActionLoading || isAllEmpty || isWorkMissing}
                   className={`px-8 py-2 text-white text-sm rounded-lg font-bold shadow-lg transition-all ${(isActionLoading || isAllEmpty || isWorkMissing)
-                      ? 'bg-slate-300 cursor-not-allowed shadow-none'
-                      : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30 active:scale-95'
+                    ? 'bg-slate-300 cursor-not-allowed shadow-none'
+                    : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30 active:scale-95'
                     }`}
                 >
                   {isActionLoading ? "保存中..." : "保存する"}

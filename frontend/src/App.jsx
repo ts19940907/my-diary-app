@@ -48,7 +48,7 @@ function App() {
         <div className="min-h-screen bg-slate-50 py-12 px-4">
           <div className="max-w-5xl mx-auto">
             <header className="flex flex-col sm:flex-row justify-between items-center gap-4 p-4">
-              <h1 className="text-5xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-4xl sm:text-5xl font-black text-slate-900 tracking-tight">
                 Work Diary <span className="text-blue-600">v1.0</span>
               </h1>
               <div className="flex sm:flex-row flex-col items-center">
