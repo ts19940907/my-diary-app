@@ -15,6 +15,9 @@ const Calendar = ({ getAccessToken }) => {
   const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, content: {} });
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const isAllEmpty = !formData.work.trim() && !formData.issue.trim() && !formData.solution.trim();
+  const isWorkMissing = !formData.work.trim() && (formData.issue.trim() || formData.solution.trim());
+  const isExistingData = diaries?.some(d => d.date === selectedDate);
 
   const diariesRef = useRef([]);
   const API_URL = import.meta.env.VITE_APP_API_URL;
@@ -231,10 +234,15 @@ const Calendar = ({ getAccessToken }) => {
                   業務内容
                 </label>
                 <textarea
-                  className="w-full border border-slate-200 p-3 rounded-xl h-30 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm leading-relaxed"
+                  className={`w-full border p-3 rounded-xl h-30 outline-none transition-all text-sm leading-relaxed ${isWorkMissing ? 'border-red-500 focus:ring-red-500/20' : 'border-slate-200 focus:ring-blue-500/20'
+                    }`}
                   value={formData.work}
                   onChange={(e) => setFormData({ ...formData, work: e.target.value })}
                 />
+                {/* 💡 警告メッセージの表示 */}
+                {isWorkMissing && (
+                  <p className="text-red-500 text-xs mt-1 font-bold">※ 実施した業務の入力は必須です</p>
+                )}
               </div>
 
               {/* 課題点 */}
@@ -267,14 +275,14 @@ const Calendar = ({ getAccessToken }) => {
             {/* フッター: 下部に固定 */}
             <div className="p-4 bg-slate-50 flex justify-between items-center border-t border-slate-100 flex-shrink-0">
               <div>
-                {diaries?.some(d => d.date === selectedDate) && (
+                {isExistingData && (
                   <button
                     onClick={handleDelete}
-                    disabled={isActionLoading} // 💡 制御
-                    className={`px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors ${isActionLoading ? 'opacity-50 cursor-not-allowed' : ''
+                    disabled={isActionLoading || !isExistingData} // 念のため条件追加
+                    className={`px-4 py-2 text-sm font-bold text-red-600 rounded-lg transition-colors ${isActionLoading ? 'opacity-50' : 'hover:bg-red-50'
                       }`}
                   >
-                    {isActionLoading ? "処理中..." : "削除"}
+                    削除
                   </button>
                 )}
               </div>
@@ -287,18 +295,13 @@ const Calendar = ({ getAccessToken }) => {
                 </button>
                 <button
                   onClick={handleSave}
-                  disabled={isActionLoading} // 💡 制御
-                  className={`px-8 py-2 bg-blue-600 text-white text-sm rounded-lg font-bold shadow-lg shadow-blue-500/30 transition-all active:scale-95 ${isActionLoading ? 'bg-blue-400 cursor-not-allowed' : 'hover:bg-blue-700'
+                  disabled={isActionLoading || isAllEmpty || isWorkMissing}
+                  className={`px-8 py-2 text-white text-sm rounded-lg font-bold shadow-lg transition-all ${(isActionLoading || isAllEmpty || isWorkMissing)
+                      ? 'bg-slate-300 cursor-not-allowed shadow-none'
+                      : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30 active:scale-95'
                     }`}
                 >
-                  {isActionLoading ? (
-                    <span className="flex items-center">
-                      <svg className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full" viewBox="0 0 24 24"></svg>
-                      保存中...
-                    </span>
-                  ) : (
-                    "保存する"
-                  )}
+                  {isActionLoading ? "保存中..." : "保存する"}
                 </button>
               </div>
             </div>
