@@ -1,16 +1,10 @@
-# Python
-backend/__pycache__/
-backend/.venv/
-backend/.env
 frontend/.env
 frontend/.env.local
 frontend/.env.development
 frontend/.env.production
 frontend/.next/
 frontend/node_modules/
-
-# SQLite Database (ローカルのデータはプッシュしない)
-backend/*.db
+frontend/data/*.db
 
 # OS
 .DS_Store

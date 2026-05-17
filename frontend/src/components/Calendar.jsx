@@ -48,7 +48,7 @@ const calendarStyles = `
   }
 `;
 
-export default function Calendar({ getAccessToken }) {
+export default function Calendar() {
   const [diaries, setDiaries] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
@@ -65,7 +65,7 @@ export default function Calendar({ getAccessToken }) {
   const getHolidayName = (date) => JapaneseHolidays.isHoliday(date);
 
   const diariesRef = useRef([]);
-  const API_URL = process.env.NEXT_PUBLIC_APP_API_URL;
+  const API_URL = '/api';
   const [dialogConfig, setDialogConfig] = useState({
     isOpen: false,
     title: '',
@@ -111,10 +111,7 @@ export default function Calendar({ getAccessToken }) {
   }, [diaries]);
 
   const fetchDiaries = async () => {
-    const token = await getAccessToken();
-    const response = await axios.get(`${API_URL}/diaries`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await axios.get(`${API_URL}/diaries`);
     setDiaries(response.data);
   };
 
@@ -144,10 +141,7 @@ export default function Calendar({ getAccessToken }) {
   const handleDelete = async () => {
     setIsActionLoading(true);
     try {
-      const token = await getAccessToken();
-      await axios.delete(`${API_URL}/diaries/${selectedDate}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(`${API_URL}/diaries/${selectedDate}`);
       toast.success('削除しました');
       await fetchDiaries();
       setIsModalOpen(false);
@@ -166,15 +160,12 @@ export default function Calendar({ getAccessToken }) {
 
     setIsActionLoading(true);
     try {
-      const token = await getAccessToken();
       const payload = {
         ...formData,
         date: selectedDate,
         summary: formData.work.substring(0, 10) + '...',
       };
-      await axios.post(`${API_URL}/diaries`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.post(`${API_URL}/diaries`, payload);
       toast.success('保存しました！', {
         style: {
           borderRadius: '10px',

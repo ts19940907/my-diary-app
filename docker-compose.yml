@@ -1,18 +1,12 @@
 version: '3.8'
 
 services:
-  backend:
-    build: ./backend
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app
-    environment:
-      - DATABASE_URL=sqlite:///./test.db
-
   frontend:
     build: ./frontend
     ports:
       - "3000:3000"
-    depends_on:
-      - backend
+    environment:
+      - AUTH_SECRET=${AUTH_SECRET:-local-dev-secret}
+      - DATABASE_URL=file:/app/data/diary.db
+    volumes:
+      - ./frontend/data:/app/data
